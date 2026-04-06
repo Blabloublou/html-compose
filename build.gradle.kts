@@ -1,9 +1,9 @@
 import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension
 
 plugins {
-    kotlin("multiplatform")
-    kotlin("plugin.compose")
-    id("org.jetbrains.compose")
+    kotlin("multiplatform") version "2.0.21"
+    kotlin("plugin.compose") version "2.0.21"
+    id("org.jetbrains.compose") version "1.7.3"
 }
 
 repositories {
@@ -19,7 +19,13 @@ kotlin {
     }
 
     sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation(kotlin("stdlib"))
+            }
+        }
         val jsMain by getting {
+            dependsOn(commonMain)
             dependencies {
                 implementation(compose.html.core)
                 implementation(compose.runtime)
@@ -28,8 +34,6 @@ kotlin {
     }
 }
 
-// https://youtrack.jetbrains.com/issue/KT-48273
-// webpack-cli < 4.10.0 + @webpack-cli/serve → cli.isMultipleCompiler is not a function
 afterEvaluate {
     rootProject.extensions.configure<NodeJsRootExtension> {
         versions.webpackDevServer.version = "4.0.0"
