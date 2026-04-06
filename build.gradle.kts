@@ -13,6 +13,8 @@ repositories {
 }
 
 kotlin {
+    jvm()
+
     js(IR) {
         browser()
         binaries.executable()
@@ -22,6 +24,16 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(kotlin("stdlib"))
+            }
+        }
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+        val jvmMain by getting {
+            dependencies {
+                implementation(compose.runtime)
             }
         }
         val jsMain by getting {

@@ -1,6 +1,7 @@
 package connectfour.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,20 +19,23 @@ import connectfour.chrome.ConnectFourNewGameButton
 import connectfour.cursor.ConnectFourCursorPreview
 import connectfour.modals.ConnectFourConfigModal
 import connectfour.modals.ConnectFourGameOverModal
-import kotlinx.browser.localStorage
 import org.jetbrains.compose.web.dom.Div
-
-private const val STORAGE_KEY = "connectfour-state"
 
 @Composable
 fun ConnectFourApp() {
-    var config by remember { mutableStateOf(GameConfig(rows = 6, cols = 7, winLength = 4)) }
-    var boardState by remember { mutableStateOf(config.emptyBoard()) }
-    var currentPlayer by remember { mutableStateOf(Player.One) }
+    val restored = remember { loadConnectFourSnapshot() }
+    val initialConfig = restored?.config ?: GameConfig(rows = 6, cols = 7, winLength = 4)
+    var config by remember { mutableStateOf(initialConfig) }
+    var boardState by remember {
+        mutableStateOf(restored?.boardState ?: initialConfig.emptyBoard())
+    }
+    var currentPlayer by remember {
+        mutableStateOf(restored?.currentPlayer ?: Player.One)
+    }
     var feedback by remember { mutableStateOf<String?>(null) }
 
-    var showConfigModal by remember { mutableStateOf(true) }
-    var hasConfirmedConfigOnce by remember { mutableStateOf(false) }
+    var showConfigModal by remember { mutableStateOf(restored == null) }
+    var hasConfirmedConfigOnce by remember { mutableStateOf(restored != null) }
     var modalRows by remember { mutableStateOf(config.rows) }
     var modalCols by remember { mutableStateOf(config.cols) }
     var modalWin by remember { mutableStateOf(config.winLength) }
@@ -43,8 +47,11 @@ fun ConnectFourApp() {
 
     var pendingDrop by remember { mutableStateOf<PendingDrop?>(null) }
 
-    fun clearStorage() {
-        localStorage.removeItem(STORAGE_KEY)
+    LaunchedEffect(config, boardState, currentPlayer, pendingDrop, showConfigModal, hasConfirmedConfigOnce) {
+        if (pendingDrop != null) return@LaunchedEffect
+        if (showConfigModal) return@LaunchedEffect
+        if (!hasConfirmedConfigOnce) return@LaunchedEffect
+        saveConnectFourSnapshot(config, boardState, currentPlayer)
     }
 
     fun openConfigModal() {
@@ -62,7 +69,6 @@ fun ConnectFourApp() {
             boardState = next.emptyBoard()
             currentPlayer = Player.One
             feedback = null
-            clearStorage()
             modalFeedback = null
             showConfigModal = false
             hasConfirmedConfigOnce = true
@@ -76,7 +82,6 @@ fun ConnectFourApp() {
         boardState = config.emptyBoard()
         currentPlayer = Player.One
         feedback = null
-        clearStorage()
         pendingDrop = null
     }
 
