@@ -1,0 +1,318 @@
+:root {
+    color-scheme: only light;
+    --board-blue: #1d4ed8;
+    --board-blue-deep: #1e3a8a;
+    --hole-size: min(88%, 100%);
+}
+
+body {
+    margin: 0;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.45;
+}
+
+.connect-four-app {
+    max-width: min(960px, 100%);
+    margin: 0 auto;
+    padding: clamp(4px, 1vw, 8px) clamp(12px, 3vw, 28px) clamp(12px, 3vw, 28px);
+    box-sizing: border-box;
+    background: #ffffff;
+}
+
+.connect-four-feedback {
+    color: #b91c1c;
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+}
+
+.connect-four-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(16px, 4vw, 32px);
+    box-sizing: border-box;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+}
+
+.connect-four-modal-backdrop--gameover {
+    z-index: 1001;
+}
+
+.connect-four-modal {
+    width: 100%;
+    max-width: 22rem;
+    padding: clamp(18px, 4vw, 26px);
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow:
+        0 25px 50px -12px rgba(15, 23, 42, 0.25),
+        0 0 0 1px rgba(15, 23, 42, 0.06);
+    box-sizing: border-box;
+}
+
+.connect-four-modal--gameover {
+    text-align: center;
+    max-width: 24rem;
+}
+
+.connect-four-gameover-title {
+    font-size: clamp(1.35rem, 4vw, 1.75rem);
+}
+
+.connect-four-gameover-subtitle {
+    margin-bottom: 1.25rem !important;
+}
+
+.connect-four-modal-title {
+    font-size: clamp(1.1rem, 3vw, 1.35rem);
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+    color: #0f172a;
+}
+
+.connect-four-modal-hint {
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.connect-four-modal-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 1rem;
+}
+
+.connect-four-modal-fields .connect-four-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+}
+
+.connect-four-modal-fields .connect-four-field input {
+    width: 4.5rem;
+    flex-shrink: 0;
+}
+
+.connect-four-modal-error {
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
+    color: #b91c1c;
+}
+
+.connect-four-modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.connect-four-modal-actions--split {
+    justify-content: space-between;
+    align-items: center;
+}
+
+.connect-four-modal-btn {
+    font: inherit;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.connect-four-modal-btn--primary {
+    background: var(--board-blue);
+    color: #ffffff;
+    border-color: var(--board-blue-deep);
+    font-weight: 600;
+}
+
+.connect-four-modal-btn--primary:hover {
+    filter: brightness(1.05);
+}
+
+.connect-four-modal-btn--secondary {
+    background: #f8fafc;
+    color: #334155;
+    border-color: #cbd5e1;
+}
+
+.connect-four-modal-btn--secondary:hover {
+    background: #f1f5f9;
+}
+
+.connect-four-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: clamp(0.85rem, 2.2vw, 0.95rem);
+}
+
+.connect-four-field input {
+    width: 4rem;
+    padding: 6px 8px;
+    font: inherit;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.connect-four-new-game {
+    font: inherit;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #94a3b8;
+    background: #f8fafc;
+    color: #0f172a;
+    cursor: pointer;
+}
+
+.connect-four-new-game:hover {
+    background: #f1f5f9;
+}
+
+.connect-four-new-game--fixed {
+    position: fixed;
+    top: clamp(6px, 1.5vw, 12px);
+    left: clamp(6px, 1.5vw, 12px);
+    z-index: 600;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.connect-four-board-wrap {
+    width: 100%;
+    max-width: 100%;
+}
+
+.connect-four-board-wrap--hide-cursor,
+.connect-four-board-wrap--hide-cursor .connect-four-column {
+    cursor: none;
+}
+
+.connect-four-cursor-preview {
+    position: fixed;
+    z-index: 500;
+    pointer-events: none;
+    width: clamp(28px, 7vmin, 48px);
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 4px 10px rgba(15, 23, 42, 0.35));
+}
+
+.connect-four-cursor-preview .connect-four-piece {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    aspect-ratio: 1;
+}
+
+.connect-four-board {
+    container-type: inline-size;
+    display: grid;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    align-items: stretch;
+    gap: clamp(5px, 1.2vw, 9px);
+    padding: clamp(10px, 2vw, 16px);
+    background: var(--board-blue);
+    border-radius: clamp(8px, 2vw, 14px);
+    box-shadow:
+        0 4px 0 var(--board-blue-deep),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.connect-four-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: clamp(5px, 1.2vw, 9px);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 0;
+    min-width: 0;
+    font: inherit;
+    border-radius: 6px;
+}
+
+.connect-four-column:focus-visible {
+    outline: 3px solid #ffffff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--board-blue);
+}
+
+.connect-four-cell {
+    position: relative;
+    aspect-ratio: 1;
+    width: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: transparent;
+}
+
+.connect-four-hole {
+    width: var(--hole-size);
+    aspect-ratio: 1;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.12);
+    flex-shrink: 0;
+}
+
+.connect-four-piece {
+    width: var(--hole-size);
+    aspect-ratio: 1;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.connect-four-piece--one {
+    background: #dc2626;
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.25),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.connect-four-piece--two {
+    background: #eab308;
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.35),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 520px) {
+    .connect-four-field input {
+        width: 100%;
+        max-width: 6rem;
+    }
+
+    .connect-four-modal-fields .connect-four-field {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .connect-four-modal-fields .connect-four-field input {
+        width: 100%;
+        max-width: none;
+    }
+}
