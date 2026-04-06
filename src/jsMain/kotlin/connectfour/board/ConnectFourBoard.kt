@@ -1,22 +1,28 @@
 package connectfour.board
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import connectfour.BoardState
 import connectfour.GameConfig
 import connectfour.Player
+import org.jetbrains.compose.web.attributes.ref
 import org.jetbrains.compose.web.dom.Button
 import org.jetbrains.compose.web.dom.Div
+import org.w3c.dom.HTMLButtonElement
 
 @Composable
 internal fun ConnectFourBoard(
     boardState: BoardState,
     config: GameConfig,
+    pendingDrop: PendingDrop?,
     showCursorPreview: Boolean,
     onCursorEnter: () -> Unit,
     onCursorLeave: () -> Unit,
     onCursorMove: (Double, Double) -> Unit,
     onColumnClick: (Int) -> Unit,
+    onDropAnimationEnd: () -> Unit,
 ) {
+    val columnRefs = remember(config.cols) { arrayOfNulls<HTMLButtonElement>(config.cols) }
     Div(attrs = {
         classes("connect-four-board-wrap")
         if (showCursorPreview) {
@@ -37,10 +43,25 @@ internal fun ConnectFourBoard(
                     classes("connect-four-column")
                     attr("type", "button")
                     attr("aria-label", "Column ${col + 1}, drop a piece")
+                    ref {
+                        columnRefs[col] = it as HTMLButtonElement
+                        onDispose {
+                            columnRefs[col] = null
+                        }
+                    }
                     onClick { onColumnClick(col) }
                 }) {
                     for (row in 0 until config.rows) {
                         ConnectFourCell(piece = boardState.cell(row, col))
+                    }
+                    pendingDrop?.takeIf { it.column == col }?.let { drop ->
+                        ConnectFourDropAnimation(
+                            columnIndex = col,
+                            columnRefs = columnRefs,
+                            landingRow = drop.landingRow,
+                            player = drop.player,
+                            onComplete = onDropAnimationEnd,
+                        )
                     }
                 }
             }

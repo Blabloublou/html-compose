@@ -18,7 +18,7 @@ object ConnectFourEngine {
         }
 
         val newState = BoardState(state.config, newCells, gameOver)
-        return DropResult.Success(newState, gameOver)
+        return DropResult.Success(newState, gameOver, landingRow)
     }
 
     private fun findLandingRow(state: BoardState, column: Int): Int? {

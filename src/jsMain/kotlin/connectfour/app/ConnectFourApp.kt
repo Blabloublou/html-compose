@@ -12,6 +12,7 @@ import connectfour.GameConfig
 import connectfour.Player
 import connectfour.emptyBoard
 import connectfour.board.ConnectFourBoard
+import connectfour.board.PendingDrop
 import connectfour.chrome.ConnectFourFeedback
 import connectfour.chrome.ConnectFourNewGameButton
 import connectfour.cursor.ConnectFourCursorPreview
@@ -40,6 +41,8 @@ fun ConnectFourApp() {
     var cursorY by remember { mutableStateOf(0.0) }
     var cursorOverBoard by remember { mutableStateOf(false) }
 
+    var pendingDrop by remember { mutableStateOf<PendingDrop?>(null) }
+
     fun clearStorage() {
         localStorage.removeItem(STORAGE_KEY)
     }
@@ -63,6 +66,7 @@ fun ConnectFourApp() {
             modalFeedback = null
             showConfigModal = false
             hasConfirmedConfigOnce = true
+            pendingDrop = null
         }.onFailure { e ->
             modalFeedback = e.message
         }
@@ -73,18 +77,32 @@ fun ConnectFourApp() {
         currentPlayer = Player.One
         feedback = null
         clearStorage()
+        pendingDrop = null
+    }
+
+    fun applyPendingDrop() {
+        val p = pendingDrop ?: return
+        boardState = p.newState
+        pendingDrop = null
+        if (p.gameOver == null) {
+            currentPlayer = currentPlayer.other()
+        }
     }
 
     fun onColumnClick(column: Int) {
         if (showConfigModal) return
+        if (pendingDrop != null) return
         if (boardState.gameOver != null) return
         when (val result = ConnectFourEngine.drop(boardState, currentPlayer, column)) {
             is DropResult.Success -> {
-                boardState = result.newState
+                pendingDrop = PendingDrop(
+                    column = column,
+                    landingRow = result.landingRow,
+                    player = currentPlayer,
+                    newState = result.newState,
+                    gameOver = result.gameOver,
+                )
                 feedback = null
-                if (result.gameOver == null) {
-                    currentPlayer = currentPlayer.other()
-                }
             }
             DropResult.ColumnFull -> feedback = "This column is full."
             DropResult.InvalidColumn -> { }
@@ -107,6 +125,7 @@ fun ConnectFourApp() {
         ConnectFourBoard(
             boardState = boardState,
             config = config,
+            pendingDrop = pendingDrop,
             showCursorPreview = showCursorPreview,
             onCursorEnter = { cursorOverBoard = true },
             onCursorLeave = { cursorOverBoard = false },
@@ -115,6 +134,7 @@ fun ConnectFourApp() {
                 cursorY = y
             },
             onColumnClick = { onColumnClick(it) },
+            onDropAnimationEnd = { applyPendingDrop() },
         )
 
         if (showCursorPreview) {

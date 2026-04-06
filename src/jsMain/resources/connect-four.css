@@ -234,6 +234,8 @@ body {
 }
 
 .connect-four-column {
+    position: relative;
+    overflow: visible;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -298,6 +300,20 @@ body {
     box-shadow:
         inset 0 2px 0 rgba(255, 255, 255, 0.35),
         inset 0 -2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.connect-four-drop-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.connect-four-drop-piece {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    box-sizing: border-box;
 }
 
 @media (max-width: 520px) {
