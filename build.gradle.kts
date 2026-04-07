@@ -31,11 +31,6 @@ kotlin {
                 implementation(kotlin("test"))
             }
         }
-        val jvmMain by getting {
-            dependencies {
-                implementation(compose.runtime)
-            }
-        }
         val jsMain by getting {
             dependsOn(commonMain)
             dependencies {

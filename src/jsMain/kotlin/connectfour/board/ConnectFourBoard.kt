@@ -1,19 +1,24 @@
 package connectfour.board
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import connectfour.BoardState
-import connectfour.GameConfig
 import connectfour.Player
-import org.jetbrains.compose.web.attributes.ref
+import kotlinx.browser.window
 import org.jetbrains.compose.web.dom.Button
 import org.jetbrains.compose.web.dom.Div
-import org.w3c.dom.HTMLButtonElement
+
+private const val DROP_MS_PER_ROW = 32
+private const val DROP_MS_SETTLE = 72
 
 @Composable
 internal fun ConnectFourBoard(
     boardState: BoardState,
-    config: GameConfig,
     pendingDrop: PendingDrop?,
     showCursorPreview: Boolean,
     onCursorEnter: () -> Unit,
@@ -22,7 +27,37 @@ internal fun ConnectFourBoard(
     onColumnClick: (Int) -> Unit,
     onDropAnimationEnd: () -> Unit,
 ) {
-    val columnRefs = remember(config.cols) { arrayOfNulls<HTMLButtonElement>(config.cols) }
+    val cfg = boardState.config
+    var fallRow by remember { mutableStateOf<Int?>(null) }
+    val onEnd by rememberUpdatedState(onDropAnimationEnd)
+
+    DisposableEffect(pendingDrop) {
+        val drop = pendingDrop
+        if (drop == null) {
+            fallRow = null
+            return@DisposableEffect onDispose { }
+        }
+        fallRow = null
+        val timeouts = mutableListOf<Int>()
+        val landing = drop.landingRow
+        for (r in 0..landing) {
+            val delay = r * DROP_MS_PER_ROW
+            timeouts.add(
+                window.setTimeout({
+                    fallRow = r
+                }, delay),
+            )
+        }
+        timeouts.add(
+            window.setTimeout({
+                onEnd()
+            }, landing * DROP_MS_PER_ROW + DROP_MS_SETTLE),
+        )
+        onDispose {
+            timeouts.forEach { window.clearTimeout(it) }
+        }
+    }
+
     Div(attrs = {
         classes("connect-four-board-wrap")
         if (showCursorPreview) {
@@ -36,32 +71,20 @@ internal fun ConnectFourBoard(
     }) {
         Div(attrs = {
             classes("connect-four-board")
-            attr("style", boardGridStyle(config.cols))
+            attr("style", boardGridStyle(cfg.cols))
         }) {
-            for (col in 0 until config.cols) {
+            for (col in 0 until cfg.cols) {
                 Button(attrs = {
                     classes("connect-four-column")
                     attr("type", "button")
                     attr("aria-label", "Column ${col + 1}, drop a piece")
-                    ref {
-                        columnRefs[col] = it as HTMLButtonElement
-                        onDispose {
-                            columnRefs[col] = null
-                        }
-                    }
                     onClick { onColumnClick(col) }
                 }) {
-                    for (row in 0 until config.rows) {
-                        ConnectFourCell(piece = boardState.cell(row, col))
-                    }
-                    pendingDrop?.takeIf { it.column == col }?.let { drop ->
-                        ConnectFourDropAnimation(
-                            columnIndex = col,
-                            columnRefs = columnRefs,
-                            landingRow = drop.landingRow,
-                            player = drop.player,
-                            onComplete = onDropAnimationEnd,
-                        )
+                    for (row in 0 until cfg.rows) {
+                        val placed = boardState.cell(row, col)
+                        val falling =
+                            pendingDrop?.takeIf { it.column == col && fallRow == row && placed == null }?.player
+                        ConnectFourCell(piece = placed, fallingPiece = falling)
                     }
                 }
             }
@@ -73,7 +96,7 @@ private fun boardGridStyle(cols: Int): String =
     "grid-template-columns:repeat($cols, minmax(0, 1fr));"
 
 @Composable
-private fun ConnectFourCell(piece: Player?) {
+private fun ConnectFourCell(piece: Player?, fallingPiece: Player?) {
     Div(attrs = { classes("connect-four-cell") }) {
         if (piece != null) {
             Div(attrs = {
@@ -84,6 +107,15 @@ private fun ConnectFourCell(piece: Player?) {
             }) { }
         } else {
             Div(attrs = { classes("connect-four-hole") }) { }
+            fallingPiece?.let { fp ->
+                Div(attrs = {
+                    classes("connect-four-piece", "connect-four-piece--falling-in-cell")
+                    when (fp) {
+                        Player.One -> classes("connect-four-piece--one")
+                        Player.Two -> classes("connect-four-piece--two")
+                    }
+                }) { }
+            }
         }
     }
 }

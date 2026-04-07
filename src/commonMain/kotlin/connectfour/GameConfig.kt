@@ -7,16 +7,16 @@ data class GameConfig(
 ) {
     init {
         require(rows in MIN_DIMENSION..MAX_DIMENSION) {
-            "rows must be in $MIN_DIMENSION..$MAX_DIMENSION, got $rows"
+            "Rows must be between $MIN_DIMENSION and $MAX_DIMENSION."
         }
         require(cols in MIN_DIMENSION..MAX_DIMENSION) {
-            "cols must be in $MIN_DIMENSION..$MAX_DIMENSION, got $cols"
+            "Columns must be between $MIN_DIMENSION and $MAX_DIMENSION."
         }
         require(winLength >= MIN_WIN_LENGTH) {
-            "winLength must be >= $MIN_WIN_LENGTH, got $winLength"
+            "Line length must be at least $MIN_WIN_LENGTH."
         }
         require(winLength <= maxOf(rows, cols)) {
-            "winLength must be <= max(rows, cols) so a line can fit"
+            "Line length cannot be longer than the longer board side (${maxOf(rows, cols)})."
         }
     }
 

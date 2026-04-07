@@ -6,13 +6,14 @@ import connectfour.GameOver
 import connectfour.Player
 import kotlinx.browser.localStorage
 
-private const val STORAGE_VERSION = 1
 private const val STORAGE_KEY = "connectfour-state"
 
 data class ConnectFourLoadedSnapshot(
     val config: GameConfig,
     val boardState: BoardState,
     val currentPlayer: Player,
+    val winsPlayerOne: Int = 0,
+    val winsPlayerTwo: Int = 0,
 )
 
 private fun jsonStringify(value: Any?): String =
@@ -49,14 +50,17 @@ fun saveConnectFourSnapshot(
     config: GameConfig,
     boardState: BoardState,
     currentPlayer: Player,
+    winsPlayerOne: Int,
+    winsPlayerTwo: Int,
 ) {
     val payload = js("{}")
-    payload.v = STORAGE_VERSION
     payload.rows = config.rows
     payload.cols = config.cols
     payload.winLength = config.winLength
     payload.cells = cellsToTokenString(boardState.cells)
     payload.currentPlayer = currentPlayer.name
+    payload.winsPlayerOne = winsPlayerOne
+    payload.winsPlayerTwo = winsPlayerTwo
     when (val go = boardState.gameOver) {
         null -> {
             payload.gameOver = "none"
@@ -69,7 +73,9 @@ fun saveConnectFourSnapshot(
             payload.gameOver = "draw"
         }
     }
-    localStorage.setItem(STORAGE_KEY, jsonStringify(payload))
+    runCatching {
+        localStorage.setItem(STORAGE_KEY, jsonStringify(payload))
+    }
 }
 
 fun loadConnectFourSnapshot(): ConnectFourLoadedSnapshot? {
@@ -79,8 +85,6 @@ fun loadConnectFourSnapshot(): ConnectFourLoadedSnapshot? {
     } catch (_: Throwable) {
         return null
     }
-    val v = (d.v as? Number)?.toInt() ?: return null
-    if (v != STORAGE_VERSION) return null
 
     val rows = (d.rows as? Number)?.toInt() ?: return null
     val cols = (d.cols as? Number)?.toInt() ?: return null
@@ -109,9 +113,14 @@ fun loadConnectFourSnapshot(): ConnectFourLoadedSnapshot? {
     val boardState = runCatching { BoardState(config = config, cells = cells, gameOver = gameOver) }.getOrNull()
         ?: return null
 
+    val winsPlayerOne = (d.winsPlayerOne as? Number)?.toInt()?.coerceAtLeast(0) ?: 0
+    val winsPlayerTwo = (d.winsPlayerTwo as? Number)?.toInt()?.coerceAtLeast(0) ?: 0
+
     return ConnectFourLoadedSnapshot(
         config = config,
         boardState = boardState,
         currentPlayer = currentPlayer,
+        winsPlayerOne = winsPlayerOne,
+        winsPlayerTwo = winsPlayerTwo,
     )
 }

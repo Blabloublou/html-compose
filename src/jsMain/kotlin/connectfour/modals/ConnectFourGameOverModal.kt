@@ -12,6 +12,8 @@ import org.jetbrains.compose.web.dom.Text
 @Composable
 internal fun ConnectFourGameOverModal(
     gameOver: GameOver,
+    winsPlayerOne: Int,
+    winsPlayerTwo: Int,
     onReplay: () -> Unit,
     onNewGameSettings: () -> Unit,
 ) {
@@ -49,6 +51,11 @@ internal fun ConnectFourGameOverModal(
                 }
             }
 
+            ConnectFourWinSeriesTally(
+                winsPlayerOne = winsPlayerOne,
+                winsPlayerTwo = winsPlayerTwo,
+            )
+
             Div(attrs = { classes("connect-four-modal-actions", "connect-four-modal-actions--split") }) {
                 Button(attrs = {
                     classes("connect-four-modal-btn", "connect-four-modal-btn--secondary")
@@ -66,5 +73,15 @@ internal fun ConnectFourGameOverModal(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ConnectFourWinSeriesTally(
+    winsPlayerOne: Int,
+    winsPlayerTwo: Int,
+) {
+    P(attrs = { classes("connect-four-modal-hint", "connect-four-modal-win-tally") }) {
+        Text("Series wins — Red: $winsPlayerOne · Yellow: $winsPlayerTwo")
     }
 }

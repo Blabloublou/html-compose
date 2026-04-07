@@ -2,7 +2,11 @@ package connectfour
 
 object ConnectFourEngine {
 
-    fun drop(state: BoardState, player: Player, column: Int): DropResult {
+    fun drop(
+        state: BoardState,
+        player: Player,
+        column: Int,
+    ): DropResult {
         if (state.gameOver != null) return DropResult.GameAlreadyOver
         if (column !in 0 until state.config.cols) return DropResult.InvalidColumn
 
@@ -18,7 +22,7 @@ object ConnectFourEngine {
         }
 
         val newState = BoardState(state.config, newCells, gameOver)
-        return DropResult.Success(newState, gameOver, landingRow)
+        return DropResult.Success(newState, landingRow)
     }
 
     private fun findLandingRow(state: BoardState, column: Int): Int? {

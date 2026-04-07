@@ -22,3 +22,6 @@ jobs:
 
       - name: Run JVM tests
         run: gradle jvmTest --no-daemon
+
+      - name: Build JS bundle (production webpack)
+        run: gradle jsBrowserProductionWebpack --no-daemon
