@@ -14,20 +14,28 @@ import org.jetbrains.compose.web.dom.Text
 
 @Composable
 internal fun ConnectFourConfigModal(
-    modalRows: Int,
-    modalCols: Int,
-    modalWin: Int,
+    modalRowsText: String,
+    modalColsText: String,
+    modalWinText: String,
     modalFeedback: String?,
     showCancel: Boolean,
-    onRowsChange: (Int) -> Unit,
-    onColsChange: (Int) -> Unit,
-    onWinChange: (Int) -> Unit,
+    onRowsTextChange: (String) -> Unit,
+    onColsTextChange: (String) -> Unit,
+    onWinTextChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val winHi = maxOf(modalRows, modalCols)
+    val rowsParsed = modalRowsText.trim().toIntOrNull()
+    val colsParsed = modalColsText.trim().toIntOrNull()
     val winLo = GameConfig.MIN_WIN_LENGTH
-    val canStart = winHi >= winLo && modalWin in winLo..winHi
+    val boardSide = if (rowsParsed != null && colsParsed != null) {
+        maxOf(rowsParsed, colsParsed)
+    } else {
+        null
+    }
+    val winHiForField = boardSide ?: GameConfig.MAX_DIMENSION
+    val boardTooSmall = boardSide != null && boardSide < winLo
+    val canStart = GameConfig.parseOrNull(modalRowsText, modalColsText, modalWinText) != null
 
     Div(attrs = {
         classes("connect-four-modal-backdrop")
@@ -46,40 +54,44 @@ internal fun ConnectFourConfigModal(
             }
 
             P(attrs = { classes("connect-four-modal-hint") }) {
-                Text("Rows, columns, and how many in a row to win.")
+                Text(
+                    "Rows, columns, and how many in a row to win. " +
+                        "Rows and columns: ${GameConfig.MIN_DIMENSION}–${GameConfig.MAX_DIMENSION}. " +
+                        "Minimum line length: $winLo (cannot exceed the longer board side).",
+                )
             }
 
             Div(attrs = { classes("connect-four-modal-fields") }) {
                 ConnectFourConfigField(
                     label = "Rows",
-                    currentValue = modalRows,
+                    valueText = modalRowsText,
                     min = GameConfig.MIN_DIMENSION,
                     max = GameConfig.MAX_DIMENSION,
-                    onValidChange = onRowsChange,
+                    onTextChange = onRowsTextChange,
                 )
 
                 ConnectFourConfigField(
                     label = "Columns",
-                    currentValue = modalCols,
+                    valueText = modalColsText,
                     min = GameConfig.MIN_DIMENSION,
                     max = GameConfig.MAX_DIMENSION,
-                    onValidChange = onColsChange,
+                    onTextChange = onColsTextChange,
                 )
 
-                if (winLo > winHi) {
+                if (boardTooSmall) {
                     P(attrs = { classes("connect-four-modal-hint") }) {
                         Text(
                             "Increase rows or columns: you need a side of at least $winLo to play " +
-                                "(currently $winHi).",
+                                "(currently $boardSide).",
                         )
                     }
                 } else {
                     ConnectFourConfigField(
                         label = "Line length to win",
-                        currentValue = modalWin,
+                        valueText = modalWinText,
                         min = winLo,
-                        max = winHi,
-                        onValidChange = onWinChange,
+                        max = winHiForField,
+                        onTextChange = onWinTextChange,
                     )
                 }
             }
@@ -123,24 +135,20 @@ internal fun ConnectFourConfigModal(
 @Composable
 private fun ConnectFourConfigField(
     label: String,
-    currentValue: Int,
+    valueText: String,
     min: Int,
     max: Int,
-    onValidChange: (Int) -> Unit,
+    onTextChange: (String) -> Unit,
 ) {
     Label(attrs = { classes("connect-four-field") }) {
         Span { Text("$label ") }
         Input(InputType.Number, attrs = {
-            value(currentValue.toString())
+            value(valueText)
             attr("min", "$min")
             attr("max", "$max")
+            attr("inputmode", "numeric")
             onInput { event ->
-                val raw = event.value?.toString()?.trim().orEmpty()
-                if (raw.isEmpty()) return@onInput
-                val parsed = raw.toIntOrNull() ?: return@onInput
-                if (parsed in min..max) {
-                    onValidChange(parsed)
-                }
+                onTextChange(event.value?.toString().orEmpty())
             }
         })
     }

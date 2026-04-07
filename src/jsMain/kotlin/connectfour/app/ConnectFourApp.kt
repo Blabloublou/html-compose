@@ -40,9 +40,9 @@ fun ConnectFourApp() {
 
     var showConfigModal by remember { mutableStateOf(restored == null) }
     var hasConfirmedConfigOnce by remember { mutableStateOf(restored != null) }
-    var modalRows by remember { mutableStateOf(config.rows) }
-    var modalCols by remember { mutableStateOf(config.cols) }
-    var modalWin by remember { mutableStateOf(config.winLength) }
+    var modalRowsText by remember { mutableStateOf(config.rows.toString()) }
+    var modalColsText by remember { mutableStateOf(config.cols.toString()) }
+    var modalWinText by remember { mutableStateOf(config.winLength.toString()) }
     var modalFeedback by remember { mutableStateOf<String?>(null) }
 
     var cursorX by remember { mutableStateOf(0.0) }
@@ -75,30 +75,43 @@ fun ConnectFourApp() {
     }
 
     fun openConfigModal() {
-        modalRows = config.rows
-        modalCols = config.cols
-        modalWin = config.winLength
+        modalRowsText = config.rows.toString()
+        modalColsText = config.cols.toString()
+        modalWinText = config.winLength.toString()
         modalFeedback = null
         showConfigModal = true
     }
 
+    fun coerceModalWinAfterDimensions() {
+        val r = modalRowsText.trim().toIntOrNull() ?: return
+        val c = modalColsText.trim().toIntOrNull() ?: return
+        val hi = maxOf(r, c)
+        val lo = GameConfig.MIN_WIN_LENGTH
+        if (lo > hi) return
+        val w = modalWinText.trim().toIntOrNull() ?: return
+        val coerced = w.coerceIn(lo..hi)
+        if (coerced != w) modalWinText = coerced.toString()
+    }
+
     fun confirmConfig() {
-        runCatching {
-            val next = GameConfig(rows = modalRows, cols = modalCols, winLength = modalWin)
-            config = next
-            boardState = next.emptyBoard()
-            currentPlayer = Player.One
-            feedback = null
-            modalFeedback = null
-            showConfigModal = false
-            hasConfirmedConfigOnce = true
-            pendingDrop = null
-            moveHistory = emptyList()
-            winsPlayerOne = 0
-            winsPlayerTwo = 0
-        }.onFailure { e ->
-            modalFeedback = (e as? IllegalArgumentException)?.message ?: "Invalid settings."
+        val next = GameConfig.parseOrNull(modalRowsText, modalColsText, modalWinText)
+        if (next == null) {
+            modalFeedback =
+                "Enter valid numbers: rows and columns ${GameConfig.MIN_DIMENSION}–${GameConfig.MAX_DIMENSION}, " +
+                    "line length ${GameConfig.MIN_WIN_LENGTH} up to the longer board side."
+            return
         }
+        config = next
+        boardState = next.emptyBoard()
+        currentPlayer = Player.One
+        feedback = null
+        modalFeedback = null
+        showConfigModal = false
+        hasConfirmedConfigOnce = true
+        pendingDrop = null
+        moveHistory = emptyList()
+        winsPlayerOne = 0
+        winsPlayerTwo = 0
     }
 
     fun replaySameConfig() {
@@ -209,28 +222,20 @@ fun ConnectFourApp() {
 
         if (showConfigModal) {
             ConnectFourConfigModal(
-                modalRows = modalRows,
-                modalCols = modalCols,
-                modalWin = modalWin,
+                modalRowsText = modalRowsText,
+                modalColsText = modalColsText,
+                modalWinText = modalWinText,
                 modalFeedback = modalFeedback,
                 showCancel = hasConfirmedConfigOnce,
-                onRowsChange = { newRows ->
-                    modalRows = newRows
-                    val hi = maxOf(newRows, modalCols)
-                    val lo = GameConfig.MIN_WIN_LENGTH
-                    if (lo <= hi) {
-                        modalWin = modalWin.coerceIn(lo..hi)
-                    }
+                onRowsTextChange = { t ->
+                    modalRowsText = t
+                    coerceModalWinAfterDimensions()
                 },
-                onColsChange = { newCols ->
-                    modalCols = newCols
-                    val hi = maxOf(modalRows, newCols)
-                    val lo = GameConfig.MIN_WIN_LENGTH
-                    if (lo <= hi) {
-                        modalWin = modalWin.coerceIn(lo..hi)
-                    }
+                onColsTextChange = { t ->
+                    modalColsText = t
+                    coerceModalWinAfterDimensions()
                 },
-                onWinChange = { modalWin = it },
+                onWinTextChange = { modalWinText = it },
                 onConfirm = { confirmConfig() },
                 onCancel = {
                     showConfigModal = false
