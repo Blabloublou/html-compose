@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ConnectFourEngineTest {
@@ -132,7 +133,7 @@ class ConnectFourEngineTest {
         assertNull(state.gameOver)
         val last = ConnectFourEngine.drop(state, Player.One, 2)
         val success = assertIs<DropResult.Success>(last)
-        assertNull(success.gameOver)
+        assertNull(success.newState.gameOver)
         assertTrue(success.newState.cell(0, 0) == Player.One)
         assertTrue(success.newState.cell(0, 1) == Player.One)
         assertTrue(success.newState.cell(0, 2) == Player.One)
@@ -168,7 +169,10 @@ class ConnectFourEngineTest {
     fun invalid_column_out_of_range() {
         val state = classic.emptyBoard()
         assertEquals(DropResult.InvalidColumn, ConnectFourEngine.drop(state, Player.One, -1))
-        assertEquals(DropResult.InvalidColumn, ConnectFourEngine.drop(state, Player.One, classic.cols))
+        assertEquals(
+            DropResult.InvalidColumn,
+            ConnectFourEngine.drop(state, Player.One, classic.cols),
+        )
     }
 
     @Test
@@ -188,4 +192,12 @@ class ConnectFourEngineTest {
         assertTrue(won.gameOver is GameOver.Win)
         assertEquals(DropResult.GameAlreadyOver, ConnectFourEngine.drop(won, Player.Two, 4))
     }
+
+    @Test
+    fun game_config_rejects_board_too_small_for_min_line_length() {
+        assertFailsWith<IllegalArgumentException> {
+            GameConfig(rows = 1, cols = 1, winLength = 2)
+        }
+    }
+
 }

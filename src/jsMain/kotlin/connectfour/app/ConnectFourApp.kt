@@ -10,13 +10,15 @@ import connectfour.BoardState
 import connectfour.ConnectFourEngine
 import connectfour.DropResult
 import connectfour.GameConfig
+import connectfour.GameOver
 import connectfour.Player
 import connectfour.emptyBoard
 import connectfour.board.ConnectFourBoard
 import connectfour.board.PendingDrop
 import connectfour.chrome.ConnectFourFeedback
-import connectfour.chrome.ConnectFourNewGameButton
+import connectfour.chrome.ConnectFourFixedGameActions
 import connectfour.cursor.ConnectFourCursorPreview
+import connectfour.cursor.rememberConnectFourCursorPreviewActive
 import connectfour.modals.ConnectFourConfigModal
 import connectfour.modals.ConnectFourGameOverModal
 import org.jetbrains.compose.web.dom.Div
@@ -32,6 +34,8 @@ fun ConnectFourApp() {
     var currentPlayer by remember {
         mutableStateOf(restored?.currentPlayer ?: Player.One)
     }
+    var winsPlayerOne by remember { mutableStateOf(restored?.winsPlayerOne ?: 0) }
+    var winsPlayerTwo by remember { mutableStateOf(restored?.winsPlayerTwo ?: 0) }
     var feedback by remember { mutableStateOf<String?>(null) }
 
     var showConfigModal by remember { mutableStateOf(restored == null) }
@@ -46,12 +50,28 @@ fun ConnectFourApp() {
     var cursorOverBoard by remember { mutableStateOf(false) }
 
     var pendingDrop by remember { mutableStateOf<PendingDrop?>(null) }
+    var moveHistory by remember { mutableStateOf(emptyList<Pair<BoardState, Player>>()) }
 
-    LaunchedEffect(config, boardState, currentPlayer, pendingDrop, showConfigModal, hasConfirmedConfigOnce) {
+    LaunchedEffect(
+        config,
+        boardState,
+        currentPlayer,
+        pendingDrop,
+        showConfigModal,
+        hasConfirmedConfigOnce,
+        winsPlayerOne,
+        winsPlayerTwo,
+    ) {
         if (pendingDrop != null) return@LaunchedEffect
         if (showConfigModal) return@LaunchedEffect
         if (!hasConfirmedConfigOnce) return@LaunchedEffect
-        saveConnectFourSnapshot(config, boardState, currentPlayer)
+        saveConnectFourSnapshot(
+            config,
+            boardState,
+            currentPlayer,
+            winsPlayerOne,
+            winsPlayerTwo,
+        )
     }
 
     fun openConfigModal() {
@@ -73,8 +93,11 @@ fun ConnectFourApp() {
             showConfigModal = false
             hasConfirmedConfigOnce = true
             pendingDrop = null
+            moveHistory = emptyList()
+            winsPlayerOne = 0
+            winsPlayerTwo = 0
         }.onFailure { e ->
-            modalFeedback = e.message
+            modalFeedback = (e as? IllegalArgumentException)?.message ?: "Invalid settings."
         }
     }
 
@@ -83,14 +106,40 @@ fun ConnectFourApp() {
         currentPlayer = Player.One
         feedback = null
         pendingDrop = null
+        moveHistory = emptyList()
+    }
+
+    fun undoLastMove() {
+        if (pendingDrop != null || showConfigModal || moveHistory.isEmpty()) return
+        when (val go = boardState.gameOver) {
+            is GameOver.Win -> {
+                when (go.winner) {
+                    Player.One -> winsPlayerOne = maxOf(0, winsPlayerOne - 1)
+                    Player.Two -> winsPlayerTwo = maxOf(0, winsPlayerTwo - 1)
+                }
+            }
+            else -> Unit
+        }
+        val (prevBoard, prevPlayer) = moveHistory.last()
+        moveHistory = moveHistory.dropLast(1)
+        boardState = prevBoard
+        currentPlayer = prevPlayer
+        feedback = null
     }
 
     fun applyPendingDrop() {
         val p = pendingDrop ?: return
         boardState = p.newState
         pendingDrop = null
-        if (p.gameOver == null) {
-            currentPlayer = currentPlayer.other()
+        when (val end = p.newState.gameOver) {
+            is GameOver.Win -> {
+                when (end.winner) {
+                    Player.One -> winsPlayerOne++
+                    Player.Two -> winsPlayerTwo++
+                }
+            }
+            null -> currentPlayer = currentPlayer.other()
+            is GameOver.Draw -> Unit
         }
     }
 
@@ -100,12 +149,12 @@ fun ConnectFourApp() {
         if (boardState.gameOver != null) return
         when (val result = ConnectFourEngine.drop(boardState, currentPlayer, column)) {
             is DropResult.Success -> {
+                moveHistory = moveHistory + (boardState to currentPlayer)
                 pendingDrop = PendingDrop(
                     column = column,
                     landingRow = result.landingRow,
                     player = currentPlayer,
                     newState = result.newState,
-                    gameOver = result.gameOver,
                 )
                 feedback = null
             }
@@ -115,21 +164,30 @@ fun ConnectFourApp() {
         }
     }
 
-    val showCursorPreview =
-        !showConfigModal && boardState.gameOver == null && cursorOverBoard
+    val showCursorPreview = rememberConnectFourCursorPreviewActive(
+        !showConfigModal && boardState.gameOver == null && cursorOverBoard,
+    )
+
+    val canUndoLastMove =
+        !showConfigModal &&
+            pendingDrop == null &&
+            moveHistory.isNotEmpty()
 
     Div(attrs = {
         classes("connect-four-app")
     }) {
-        ConnectFourNewGameButton(onNewGame = { openConfigModal() })
+        ConnectFourFixedGameActions(
+            onNewGame = { openConfigModal() },
+            onUndoLastMove = { undoLastMove() },
+            undoLastMoveEnabled = canUndoLastMove,
+        )
 
         feedback?.let { msg ->
-            ConnectFourFeedback(msg)
+            ConnectFourFeedback(msg) { feedback = null }
         }
 
         ConnectFourBoard(
             boardState = boardState,
-            config = config,
             pendingDrop = pendingDrop,
             showCursorPreview = showCursorPreview,
             onCursorEnter = { cursorOverBoard = true },
@@ -142,13 +200,12 @@ fun ConnectFourApp() {
             onDropAnimationEnd = { applyPendingDrop() },
         )
 
-        if (showCursorPreview) {
-            ConnectFourCursorPreview(
-                x = cursorX,
-                y = cursorY,
-                player = currentPlayer,
-            )
-        }
+        ConnectFourCursorPreview(
+            x = cursorX,
+            y = cursorY,
+            player = currentPlayer,
+            visible = showCursorPreview,
+        )
 
         if (showConfigModal) {
             ConnectFourConfigModal(
@@ -157,8 +214,22 @@ fun ConnectFourApp() {
                 modalWin = modalWin,
                 modalFeedback = modalFeedback,
                 showCancel = hasConfirmedConfigOnce,
-                onRowsChange = { modalRows = it },
-                onColsChange = { modalCols = it },
+                onRowsChange = { newRows ->
+                    modalRows = newRows
+                    val hi = maxOf(newRows, modalCols)
+                    val lo = GameConfig.MIN_WIN_LENGTH
+                    if (lo <= hi) {
+                        modalWin = modalWin.coerceIn(lo..hi)
+                    }
+                },
+                onColsChange = { newCols ->
+                    modalCols = newCols
+                    val hi = maxOf(modalRows, newCols)
+                    val lo = GameConfig.MIN_WIN_LENGTH
+                    if (lo <= hi) {
+                        modalWin = modalWin.coerceIn(lo..hi)
+                    }
+                },
                 onWinChange = { modalWin = it },
                 onConfirm = { confirmConfig() },
                 onCancel = {
@@ -170,6 +241,8 @@ fun ConnectFourApp() {
             boardState.gameOver?.let { go ->
                 ConnectFourGameOverModal(
                     gameOver = go,
+                    winsPlayerOne = winsPlayerOne,
+                    winsPlayerTwo = winsPlayerTwo,
                     onReplay = { replaySameConfig() },
                     onNewGameSettings = { openConfigModal() },
                 )

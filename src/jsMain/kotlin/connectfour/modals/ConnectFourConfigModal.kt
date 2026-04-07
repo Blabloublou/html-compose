@@ -25,6 +25,10 @@ internal fun ConnectFourConfigModal(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    val winHi = maxOf(modalRows, modalCols)
+    val winLo = GameConfig.MIN_WIN_LENGTH
+    val canStart = winHi >= winLo && modalWin in winLo..winHi
+
     Div(attrs = {
         classes("connect-four-modal-backdrop")
     }) {
@@ -62,13 +66,22 @@ internal fun ConnectFourConfigModal(
                     onValidChange = onColsChange,
                 )
 
-                ConnectFourConfigField(
-                    label = "Line length to win",
-                    currentValue = modalWin,
-                    min = GameConfig.MIN_WIN_LENGTH,
-                    max = maxOf(modalRows, modalCols),
-                    onValidChange = onWinChange,
-                )
+                if (winLo > winHi) {
+                    P(attrs = { classes("connect-four-modal-hint") }) {
+                        Text(
+                            "Increase rows or columns: you need a side of at least $winLo to play " +
+                                "(currently $winHi).",
+                        )
+                    }
+                } else {
+                    ConnectFourConfigField(
+                        label = "Line length to win",
+                        currentValue = modalWin,
+                        min = winLo,
+                        max = winHi,
+                        onValidChange = onWinChange,
+                    )
+                }
             }
 
             modalFeedback?.let { err ->
@@ -95,7 +108,10 @@ internal fun ConnectFourConfigModal(
                 Button(attrs = {
                     classes("connect-four-modal-btn", "connect-four-modal-btn--primary")
                     attr("type", "button")
-                    onClick { onConfirm() }
+                    if (!canStart) {
+                        attr("disabled", "true")
+                    }
+                    onClick { if (canStart) onConfirm() }
                 }) {
                     Text("Start")
                 }
@@ -119,8 +135,9 @@ private fun ConnectFourConfigField(
             attr("min", "$min")
             attr("max", "$max")
             onInput { event ->
-                val num = event.value ?: return@onInput
-                val parsed = num.toInt()
+                val raw = event.value?.toString()?.trim().orEmpty()
+                if (raw.isEmpty()) return@onInput
+                val parsed = raw.toIntOrNull() ?: return@onInput
                 if (parsed in min..max) {
                     onValidChange(parsed)
                 }
